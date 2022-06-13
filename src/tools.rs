@@ -171,7 +171,7 @@ impl ArgParser {
             "cat" | "c" => Ok(CommandType::Cat),
             "diff" | "d" => Ok(CommandType::Diff),
             "help" | "h" => Ok(CommandType::Help),
-            _ => Err("Invalid command".to_string())
+            _ => Err(format!("Invalid command: {}", cmd).to_string())
         };
         match command {
             Ok(c) => match c {
