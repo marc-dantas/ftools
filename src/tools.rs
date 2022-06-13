@@ -1,6 +1,19 @@
 use std::fs::File as F;
 use std::process::exit;
+use colored::*;
 use std::io::Read;
+
+pub fn err(msg: String) -> String {
+    format!("{} → {}", "Error".red(), msg.yellow())
+}
+
+pub fn file_err(path: String, msg: String) -> String {
+    format!("{} → {}", format!("File Error (path: {})", path).red(), msg.yellow())
+}
+
+pub fn msg(text: String) -> String {
+    format!("{} → {}", "Message".blue(), text.green())
+}
 
 pub struct File {
     pub name: String,
@@ -21,11 +34,11 @@ impl File {
         if let Ok(mut f) = file {
             match f.read_to_string(&mut contents) {
                 Ok(_) => { self.content = contents; },
-                Err(e) => { println!("File error (path: \"{}\"): {}", &self.name, e); },
+                Err(e) => { println!("{}", file_err(self.name.clone(), e.to_string())) },
             };
             return true;
         } else if let Err(e) = file {
-            println!("File Error (path: \"{}\"): {}", &self.name, e);
+            println!("{}", file_err(self.name.clone(), e.to_string()));
         }
         return false;
     }
@@ -45,20 +58,20 @@ impl Grep {
     }
 
     pub fn run(&mut self) {
-        println!("Command: Grep");
+        println!("{}", msg("Command: Grep".to_string()));
         if !self.file.read() { exit(1); }
         let mut lines = self.file.content.lines();
         let mut count = 0;
         while let Some(line) = lines.next() {
             if line.contains(&self.pattern) {
-                println!("Match: {}", line);
+                println!("{}: {}", "Match".blue(), line.purple());
                 count += 1;
             }
         };
         if count == 0 {
-            println!("No matches found");
+            println!("{}", "No matches found");
         } else {
-            println!("Total match count: {}", count);
+            println!("{}: {}", "Total match count".blue(), count);
         }
     }
 }
@@ -75,9 +88,9 @@ impl Cat {
     }
 
     pub fn run(&mut self) {
-        println!("Command: Cat");
+        println!("{}", msg("Command: Cat".to_string()));
         if !self.file.read() { exit(1); }
-        println!("{}", self.file.content);
+        println!("{}", self.file.content.purple());
     }
 }
 
@@ -95,10 +108,10 @@ impl Diff {
     }
 
     pub fn run(&mut self) {
-        println!("Command: Diff");
+        println!("{}", msg("Command: Diff".to_string()));
         if !self.file1.read() { exit(1); };
         if !self.file2.read() { exit(1); };
-        println!("Comparing files: {}, {}", self.file1.name, self.file2.name);
+        println!("{}", msg(format!("Comparing files: {}, {}", self.file1.name, self.file2.name)));
         let mut lines1 = self.file1.content.lines().enumerate();
         let mut lines2 = self.file2.content.lines().enumerate();
         let mut line1 = lines1.next();
@@ -108,7 +121,7 @@ impl Diff {
             if line1.unwrap().1 != line2.unwrap().1 {
                 if line1.unwrap().0 == line2.unwrap().0 {
                     let n = line1.unwrap().0 + 1;
-                    println!("Found a difference at line {}: {} -- {}", n, line1.unwrap().1, line2.unwrap().1);
+                    println!("{} {}: {} -- {}", "Line".blue(), n, line1.unwrap().1.purple(), line2.unwrap().1.purple());
                     diff += 1;
                 }
             }
@@ -116,7 +129,7 @@ impl Diff {
             line2 = lines2.next();
         }
         if diff == 0 {
-            println!("Files are identical");
+            println!("{}", "Files are identical".blue());
         }
     }
 }
@@ -129,12 +142,12 @@ impl Help {
     }
 
     pub fn run(&mut self) {
-        println!("Usage: ftools <COMMAND> <ARGS>...");
-        println!("Commands:");
-        println!("  g, grep <FILE>  <PATTERN> Find lines matching PATTERN");
-        println!("  c, cat  <FILE>            Print the contents of FILE");
-        println!("  d, diff <FILE1> <FILE2>   Compare FILE1 and FILE2");
-        println!("  h, help                   Print this help message");
+        println!("{}: {}", "Usage".blue(), "ftools <COMMAND> <ARGS>...".green());
+        println!("{}:", "Commands".blue());
+        println!("  g, grep {}  {}    Find lines matching PATTERN", "<FILE>".magenta(), "<PATTERN>".magenta());
+        println!("  c, cat  {}               Print the contents of FILE", "<FILE>".magenta());
+        println!("  d, diff {} {}      Compare FILE1 and FILE2", "<FILE1>".magenta(), "<FILE2>".magenta());
+        println!("  h, help                      Print this help message");
     }
 }
 
@@ -171,13 +184,13 @@ impl ArgParser {
             "cat" | "c" => Ok(CommandType::Cat),
             "diff" | "d" => Ok(CommandType::Diff),
             "help" | "h" => Ok(CommandType::Help),
-            _ => Err(format!("Invalid command: {}", cmd).to_string())
+            _ => Err(err("Invalid command".to_string())),
         };
         match command {
             Ok(c) => match c {
                 CommandType::Grep => {
                     if args.len() < 2 {
-                        return Err("Not enough arguments to grep".to_string());
+                        return Err(err("Not enough arguments to grep".to_string()));
                     }
                     let file = File::new(&args[0], String::new());
                     let pattern = args[1].clone();
@@ -185,14 +198,14 @@ impl ArgParser {
                 },
                 CommandType::Cat => {
                     if args.len() < 1 {
-                        return Err("Not enough arguments to cat".to_string());
+                        return Err(err("Not enough arguments to cat".to_string()));
                     }
                     let file = File::new(&args[0], String::new());
                     Ok(Command::Cat(Cat::new(file)))
                 },
                 CommandType::Diff => {
                     if args.len() < 2 {
-                        return Err("Not enough arguments to diff".to_string());
+                        return Err(err("Not enough arguments to diff".to_string()));
                     }
                     let file1 = File::new(&args[0], String::new());
                     let file2 = File::new(&args[1], String::new());

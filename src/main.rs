@@ -1,20 +1,26 @@
 use std::env::args;
 use std::process::exit;
+use colored::*;
 mod tools;
 
+fn head() {
+    println!("{} {}", "Welcome to".blue(), "ftools".blue().bold());
+}
+
 fn main() {
+    head();
     let arguments: Vec<String>;
     if args().len() > 1 {
         arguments = args().skip(1).collect::<Vec<String>>();
     } else {
-        println!("Error: No arguments provided");
+        println!("{}: {}", "Error".red(), "No arguments provided".yellow());
         tools::Help::new().run();
         exit(1);
     }
     let cmd: tools::Command = match tools::ArgParser::new(arguments).parse() {
         Ok(c) => c,
         Err(e) => {
-            println!("Error: {}", e);
+            println!("{}", e);
             tools::Help::new().run();
             exit(1);
         }
